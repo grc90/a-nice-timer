@@ -183,13 +183,23 @@ as $$
   order by fr.day;
 $$;
 
+-- Hacen falta LOS DOS revokes, y por motivos distintos.
+--
 -- Postgres otorga EXECUTE a PUBLIC en toda función nueva, y PUBLIC incluye a
--- `anon`. Sin el revoke, un `grant ... to authenticated` no restringe nada: sólo
--- agrega un permiso que ya estaba. Acá no hay fuga —la función es
--- `security invoker`, así que RLS la filtra y para `anon` auth.uid() es NULL—
--- pero dejarla invocable la volvería peligrosa el día que alguien la pase a
--- `security definer` sin recordar este detalle.
+-- `anon`. Pero además Supabase deja `alter default privileges` en el esquema
+-- public que le dan EXECUTE a `anon` DIRECTAMENTE, no heredado de PUBLIC: sacar
+-- sólo el de PUBLIC deja el directo en pie y la función sigue siendo invocable
+-- sin cuenta. Y como `create or replace` conserva los privilegios de la función
+-- que reemplaza, esto no se arregla solo volviendo a correr el archivo: hay que
+-- nombrar a `anon`. Verificado contra el proyecto real — con un único
+-- `revoke ... from public` la llamada anónima seguía devolviendo 200.
+--
+-- Sin esto no hay fuga hoy —la función es `security invoker`, así que RLS la
+-- filtra y para `anon` auth.uid() es NULL— pero dejarla invocable la volvería
+-- peligrosa el día que alguien la pase a `security definer` sin recordar este
+-- detalle.
 revoke execute on function public.daily_focus_totals(date) from public;
+revoke execute on function public.daily_focus_totals(date) from anon;
 grant execute on function public.daily_focus_totals(date) to authenticated;
 
 -- ── Salas compartidas (body doubling) ───────────────────────────────────────
