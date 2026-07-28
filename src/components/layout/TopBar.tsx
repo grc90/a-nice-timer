@@ -116,32 +116,43 @@ export function TopBar({ resolvedTheme }: { resolvedTheme: 'light' | 'dark' }) {
           <ExpandIcon />
         </IconButton>
 
-        {/* Mobile: todo lo demás plegado. Desktop: la misma lista, suelta. */}
+        {/* Mobile: todo lo demás plegado. Desktop: la misma lista, suelta.
+
+            El `hidden`/`sm:inline-flex` NO puede ir directo sobre `IconButton`:
+            el componente ya trae `inline-flex` incondicional en su clase base, y
+            esa regla queda más abajo que `.hidden` en el CSS compilado — a
+            igual especificidad gana la que está después en la hoja de
+            estilos, así que `inline-flex` le ganaba a `hidden` en cualquier
+            ancho (verificado: `.hidden{}` antes que `.inline-flex{}` en el
+            CSS de build). Envolver en un `<div>` sin clase de display propia
+            evita la pelea: acá no hay nada incondicional con lo que competir. */}
         <MoreMenu actions={secondary} className="sm:hidden" />
 
-        {secondary.map((action) => (
-          <IconButton
-            key={action.key}
-            label={action.a11yLabel}
-            size="sm"
-            active={action.active}
-            onClick={action.onSelect}
-            className="relative hidden sm:inline-flex"
-          >
-            {action.icon}
-            {action.active && <span className="absolute right-1 top-1 size-1.5 animate-pulse rounded-full bg-accent" />}
-          </IconButton>
-        ))}
+        <div className="hidden items-center gap-0.5 sm:flex">
+          {secondary.map((action) => (
+            <IconButton
+              key={action.key}
+              label={action.a11yLabel}
+              size="sm"
+              active={action.active}
+              onClick={action.onSelect}
+              className="relative"
+            >
+              {action.icon}
+              {action.active && (
+                <span className="absolute right-1 top-1 size-1.5 animate-pulse rounded-full bg-accent" />
+              )}
+            </IconButton>
+          ))}
+        </div>
 
-        {/* Los atajos no aplican en mobile, donde no hay teclado físico. */}
-        <IconButton
-          label="Atajos de teclado"
-          size="sm"
-          className="hidden md:inline-flex"
-          onClick={() => openOverlay('shortcuts')}
-        >
-          <KeyboardIcon />
-        </IconButton>
+        {/* Los atajos no aplican en mobile, donde no hay teclado físico.
+            Mismo motivo que arriba: el `hidden` va en el `div`, no en el botón. */}
+        <div className="hidden md:block">
+          <IconButton label="Atajos de teclado" size="sm" onClick={() => openOverlay('shortcuts')}>
+            <KeyboardIcon />
+          </IconButton>
+        </div>
 
         <AccountMenu />
       </nav>
