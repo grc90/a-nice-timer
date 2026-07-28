@@ -193,6 +193,22 @@ export const MusicIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ShareIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="18" cy="5" r="2.6" />
+    <circle cx="6" cy="12" r="2.6" />
+    <circle cx="18" cy="19" r="2.6" />
+    <path d="M8.4 10.7l7.2-4.2M8.4 13.3l7.2 4.2" />
+  </Icon>
+);
+
+export const UserIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+  </Icon>
+);
+
 export const ChartIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3 21h18" />

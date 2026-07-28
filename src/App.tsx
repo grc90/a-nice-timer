@@ -4,6 +4,7 @@ import { useTimerEngine, useDocumentTitle } from '@/hooks/useTimerEngine';
 import { useKeyboardShortcuts, type ShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useAmbientSync } from '@/hooks/useAmbientSync';
+import { useAuthListener, useCloudSync } from '@/hooks/useCloudSync';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTimerStore } from '@/store/timerStore';
 import { useUiStore } from '@/store/uiStore';
@@ -21,6 +22,8 @@ import { FocusMode } from '@/components/focus/FocusMode';
 import { AudioPanel } from '@/components/audio/AudioPanel';
 import { SettingsPanel } from '@/components/settings/SettingsPanel';
 import { ShortcutsHelp } from '@/components/settings/ShortcutsHelp';
+import { AuthPanel } from '@/components/auth/AuthPanel';
+import { ShareDialog } from '@/components/rooms/ShareDialog';
 import { StatsPanel } from '@/components/stats/StatsPanel';
 import { TodayCard } from '@/components/stats/TodayCard';
 import { Button } from '@/components/ui/Button';
@@ -83,6 +86,8 @@ export default function App() {
   useTimerEngine();
   useDocumentTitle();
   useAmbientSync();
+  useAuthListener();
+  useCloudSync();
 
   const status = useTimerStore((s) => s.status);
   const phase = useTimerStore((s) => s.phase);
@@ -224,6 +229,8 @@ export default function App() {
       <SettingsPanel open={overlay === 'settings'} onClose={closeOverlay} />
       <ShortcutsHelp open={overlay === 'shortcuts'} onClose={closeOverlay} />
       <StatsPanel open={overlay === 'stats'} onClose={closeOverlay} />
+      <AuthPanel open={overlay === 'auth'} onClose={closeOverlay} />
+      <ShareDialog open={overlay === 'share'} onClose={closeOverlay} />
     </div>
   );
 }

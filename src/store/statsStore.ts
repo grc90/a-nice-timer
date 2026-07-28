@@ -38,6 +38,17 @@ interface StatsState {
   recordFocus: (input: RecordFocusInput) => void;
   setGoals: (patch: Partial<Goals>) => void;
   clearHistory: () => void;
+
+  /** Suma registros llegados de la nube, sin duplicar por id. */
+  mergeRecords: (incoming: FocusRecord[]) => void;
+  /**
+   * Aplica los totales calculados por el servidor.
+   *
+   * Reemplaza día por día en vez de sumar: el servidor tiene todos los registros
+   * y su total ya es el correcto. Sumarlo al local duplicaría el tiempo en cada
+   * sincronización. Los días que el servidor no conoce se conservan.
+   */
+  applyRemoteTotals: (totals: Record<string, DayTotal>) => void;
 }
 
 export const useStatsStore = create<StatsState>()(
@@ -82,6 +93,21 @@ export const useStatsStore = create<StatsState>()(
       setGoals: (patch) => set((state) => ({ goals: { ...state.goals, ...patch } })),
 
       clearHistory: () => set({ records: [], daily: {} }),
+
+      mergeRecords: (incoming) =>
+        set((state) => {
+          const known = new Set(state.records.map((r) => r.id));
+          const fresh = incoming.filter((r) => !known.has(r.id));
+          if (fresh.length === 0) return state;
+
+          return {
+            records: [...state.records, ...fresh]
+              .sort((a, b) => a.endedAt - b.endedAt)
+              .slice(-MAX_RECORDS),
+          };
+        }),
+
+      applyRemoteTotals: (totals) => set((state) => ({ daily: { ...state.daily, ...totals } })),
     }),
     {
       name: 'ant:stats',

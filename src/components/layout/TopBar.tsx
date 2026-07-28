@@ -2,6 +2,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
 import { useAudioStore } from '@/store/audioStore';
 import { getPalette, nextPaletteId } from '@/themes/palettes';
+import { AccountMenu } from '@/components/auth/AccountMenu';
 import { IconButton } from '@/components/ui/Button';
 import {
   ChartIcon,
@@ -12,8 +13,10 @@ import {
   MusicIcon,
   PaletteIcon,
   SettingsIcon,
+  ShareIcon,
   SunIcon,
 } from '@/components/ui/Icons';
+import { useRoomStore } from '@/store/roomStore';
 
 export function TopBar({ resolvedTheme }: { resolvedTheme: 'light' | 'dark' }) {
   const toggleTheme = useSettingsStore((s) => s.toggleTheme);
@@ -29,6 +32,8 @@ export function TopBar({ resolvedTheme }: { resolvedTheme: 'light' | 'dark' }) {
   const ambientMuted = useAudioStore((s) => s.ambientMuted);
   const currentLink = useAudioStore((s) => s.currentLink);
   const audioActive = (!ambientMuted && Object.values(mix).some((v) => v > 0)) || currentLink !== null;
+
+  const sharingLive = useRoomStore((s) => s.status) === 'live';
 
   const currentPalette = getPalette(palette);
   const nextPalette = getPalette(nextPaletteId(palette));
@@ -53,6 +58,17 @@ export function TopBar({ resolvedTheme }: { resolvedTheme: 'light' | 'dark' }) {
           {audioActive && !audioPanelOpen && (
             <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" />
           )}
+        </IconButton>
+
+        <IconButton
+          label={sharingLive ? 'Compartiendo la sesión' : 'Compartir la sesión'}
+          size="sm"
+          active={sharingLive}
+          onClick={() => openOverlay('share')}
+          className="relative"
+        >
+          <ShareIcon />
+          {sharingLive && <span className="absolute right-1 top-1 size-1.5 animate-pulse rounded-full bg-accent" />}
         </IconButton>
 
         <IconButton label="Estadísticas" size="sm" onClick={() => openOverlay('stats')}>
@@ -89,6 +105,8 @@ export function TopBar({ resolvedTheme }: { resolvedTheme: 'light' | 'dark' }) {
         <IconButton label="Ajustes" size="sm" onClick={() => openOverlay('settings')}>
           <SettingsIcon />
         </IconButton>
+
+        <AccountMenu />
       </nav>
     </header>
   );

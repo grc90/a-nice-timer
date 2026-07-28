@@ -51,6 +51,11 @@ interface AudioState {
   pushRecent: (link: SavedLink) => void;
   toggleFavorite: (link: SavedLink) => void;
   removeFavorite: (id: string) => void;
+
+  /** Lápidas de favoritos borrados, por el mismo motivo que en los presets. */
+  deletedFavoriteIds: string[];
+  replaceFavorites: (favorites: SavedLink[]) => void;
+  clearFavoriteTombstones: (ids: string[]) => void;
 }
 
 /** Volumen inicial de un canal al encenderlo desde apagado. */
@@ -108,13 +113,24 @@ export const useAudioStore = create<AudioState>()(
       toggleFavorite: (link) => {
         const existing = get().favorites.find((f) => f.url === link.url);
         if (existing) {
-          set((state) => ({ favorites: state.favorites.filter((f) => f.id !== existing.id) }));
+          get().removeFavorite(existing.id);
           return;
         }
         set((state) => ({ favorites: [...state.favorites, { ...link, id: createId() }] }));
       },
 
-      removeFavorite: (id) => set((state) => ({ favorites: state.favorites.filter((f) => f.id !== id) })),
+      removeFavorite: (id) =>
+        set((state) => ({
+          favorites: state.favorites.filter((f) => f.id !== id),
+          deletedFavoriteIds: state.deletedFavoriteIds.includes(id)
+            ? state.deletedFavoriteIds
+            : [...state.deletedFavoriteIds, id],
+        })),
+
+      deletedFavoriteIds: [],
+      replaceFavorites: (favorites) => set({ favorites }),
+      clearFavoriteTombstones: (ids) =>
+        set((state) => ({ deletedFavoriteIds: state.deletedFavoriteIds.filter((id) => !ids.includes(id)) })),
     }),
     {
       name: 'ant:audio',

@@ -30,6 +30,14 @@ function seedPresets(): SessionPreset[] {
 
 interface PresetsState {
   presets: SessionPreset[];
+  /**
+   * Lápidas de presets borrados, pendientes de propagar a la nube.
+   *
+   * Sin esto, borrar un preset en la compu y abrir el celular después lo
+   * resucitaría: el celular sólo vería una fila remota que le falta y no tendría
+   * cómo distinguir "esto se borró" de "esto todavía no lo recibí".
+   */
+  deletedIds: string[];
 
   createPreset: (draft: PresetDraft) => SessionPreset;
   updatePreset: (id: string, patch: Partial<PresetDraft>) => void;
@@ -37,12 +45,18 @@ interface PresetsState {
   deletePreset: (id: string) => void;
   getPreset: (id: string | null) => SessionPreset | null;
   reorderPresets: (fromIndex: number, toIndex: number) => void;
+
+  /** Reemplaza la lista entera tras una sincronización. */
+  replaceAll: (presets: SessionPreset[]) => void;
+  /** Descarta las lápidas ya confirmadas por el servidor. */
+  clearTombstones: (ids: string[]) => void;
 }
 
 export const usePresetsStore = create<PresetsState>()(
   persist(
     (set, get) => ({
       presets: seedPresets(),
+      deletedIds: [],
 
       createPreset: (draft) => {
         const preset = buildPreset(draft);
@@ -74,7 +88,16 @@ export const usePresetsStore = create<PresetsState>()(
         return copy;
       },
 
-      deletePreset: (id) => set((state) => ({ presets: state.presets.filter((p) => p.id !== id) })),
+      deletePreset: (id) =>
+        set((state) => ({
+          presets: state.presets.filter((p) => p.id !== id),
+          deletedIds: state.deletedIds.includes(id) ? state.deletedIds : [...state.deletedIds, id],
+        })),
+
+      replaceAll: (presets) => set({ presets }),
+
+      clearTombstones: (ids) =>
+        set((state) => ({ deletedIds: state.deletedIds.filter((id) => !ids.includes(id)) })),
 
       getPreset: (id) => (id ? (get().presets.find((p) => p.id === id) ?? null) : null),
 

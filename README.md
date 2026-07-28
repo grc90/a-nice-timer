@@ -18,9 +18,9 @@ npm run typecheck
 | 3 | Seis skins reactivas al progreso | ✅ |
 | 4 | Audio (YouTube IFrame API + sonidos ambiente) | ✅ |
 | 5 | Sistema de temas ampliado | ✅ base (5 paletas + claro/oscuro) |
-| 6 | Autenticación y sincronización | pendiente |
+| 6 | Autenticación y sincronización | ✅ |
 | 7 | Estadísticas y metas | ✅ |
-| 8 | Salas compartidas | pendiente |
+| 8 | Salas compartidas | ✅ |
 
 ## Arquitectura
 
@@ -61,6 +61,7 @@ estado local — así 60 fps de arena cayendo no re-renderizan la app entera.
 | `timerStore` | runtime del timer | parcial (`ant:timer`) |
 | `audioStore` | mezcla de ambiente, favoritos y recientes de YouTube | completa (`ant:audio`) |
 | `statsStore` | registros de foco, rollup diario, metas | completa (`ant:stats`) |
+| `authStore` | sesión y estado de sincronización | la maneja Supabase |
 | `uiStore` | modo concentración, modal abierto, panel de audio | ninguna |
 
 Están separados por frecuencia de escritura: el runtime cambia 5 veces por
@@ -222,17 +223,177 @@ un gris, para que el estado se lea a lo largo del anillo entero. Sólo el máxim
 lleva etiqueta directa; el resto vive en el hover y en la vista de tabla, que es
 además la ruta accesible.
 
+### Nube (Supabase)
+
+**localStorage sigue siendo la fuente de verdad de la app corriendo; Supabase es
+un espejo.** No al revés. Esa es la condición para que el modo invitado sea una
+función real y no un estado degradado: la app nunca espera a la red para
+responder, y perder la conexión no cambia nada de lo que se ve.
+
+**No hay una regla única de conflictos, porque las entidades no se comportan
+igual:**
+
+| Entidad | Resolución |
+|---|---|
+| Presets | última escritura gana por `updatedAt`; los borrados viajan como lápidas |
+| Registros de foco | append-only ⇒ unión por id, **no puede haber conflicto** |
+| Totales diarios | no se sincronizan: los recalcula el servidor con SQL |
+| Ajustes y metas | gana lo remoto si existe; si no, se sube lo local (migración) |
+
+**Lápidas en vez de DELETE.** Borrar pone `deleted_at`, no saca la fila. Sin eso,
+borrar un preset en la compu y abrir el celular después lo resucitaría: el celular
+sólo vería una fila remota que le falta, sin forma de distinguir "esto se borró" de
+"esto todavía no lo recibí".
+
+**`focus_records` es la tabla de hechos y los totales se calculan, no se
+guardan.** Sumar dos rollups de dos dispositivos duplicaría el tiempo en cada
+sincronización. Con los registros crudos del lado del servidor el agregado es una
+consulta (`daily_focus_totals`) y siempre da exacto — era el argumento para elegir
+Postgres sobre Firestore, y acá se cobra.
+
+**El SDK se carga a demanda.** `@supabase/supabase-js` pesa ~56 kB comprimidos y el
+modo invitado no lo usa nunca; con un import estático, alguien que abre la app a
+poner cinco minutos pagaría por un cliente de base de datos que no va a tocar. El
+chunk baja recién al intentar iniciar sesión, así que el bundle de entrada se
+mantiene en ~98 kB gzip.
+
+`updated_at` lo escribe un trigger del servidor, no el cliente: con resolución por
+última escritura, un reloj de navegador desfasado decidiría mal los conflictos.
+
+### Salas compartidas (body doubling)
+
+El host genera un link; quien lo abre ve la fase y el tiempo restante en vivo,
+**sin cuenta**. Sólo visualización: nada de chat ni de controles compartidos.
+
+**El invitado no recibe el tiempo restante: recibe `endsAt` y lo calcula.** De ahí
+sale todo lo demás. El host publica sólo en las transiciones estructurales —fase,
+estado, `endsAt`, duración, skin— y nunca por el paso del tiempo, así que una
+sesión Pomodoro de dos horas se sincroniza con unos **diez mensajes** en lugar de
+siete mil. Y el reloj del invitado sigue corriendo bien aunque se caiga el canal,
+porque no depende del canal para avanzar, sólo para enterarse de un cambio de fase.
+
+**Tres mecanismos, porque ninguno alcanza solo:**
+
+| Mecanismo | Resuelve |
+|---|---|
+| Broadcast de Realtime | actualizaciones instantáneas |
+| Snapshot en la tabla, leído al entrar | el invitado que llega en el minuto 12 de un bloque de foco y no vería nada hasta la próxima transición |
+| Sondeo cada 25 s | el WebSocket que se cae en silencio, habitual en redes móviles |
+
+**La privacidad es una decisión explícita del esquema.** La tabla `rooms` **no** es
+legible por `anon`: la lectura pasa por `get_shared_room`, una función
+`security definer` que devuelve columnas enumeradas a mano y nunca el `user_id` del
+dueño. RLS no puede filtrar por columna, así que abrir un `select` anónimo sobre la
+tabla expondría más de lo necesario y crecería solo al agregar columnas. El id de la
+sala *es* el token de invitación: un uuid v4 son 122 bits, adivinarlo no es una vía
+realista.
+
+**La vista de invitado es de sólo lectura por construcción, no por convención.** El
+ruteo vive en `main.tsx`, así que el árbol del espectador no monta el motor del
+timer, ni el sync, ni el audio — no existe la ruta de código por la que podría
+alterar la sesión del host. Verificado en el bundle: `ant:timer`, `ant:presets`,
+`ant:stats`, `ant:audio` y las recetas de audio ambiente aparecen **sólo** en el
+chunk de `App`.
+
+Y renderiza la skin del host pasándole props calculadas — que es exactamente lo que
+el contrato `SkinProps` sin acceso al store hizo posible desde el paso 3.
+
+## Puesta en marcha de la nube
+
+1. Copiá `.env.example` a `.env.local` y completá `VITE_SUPABASE_URL` y
+   `VITE_SUPABASE_ANON_KEY`. Sin esas variables la app arranca igual, en modo
+   invitado.
+2. Pegá `supabase/schema.sql` entero en el SQL Editor del proyecto y ejecutalo. Es
+   idempotente: se puede volver a correr.
+3. Para el acceso con Google, habilitá el proveedor en *Authentication →
+   Providers → Google* y agregá `http://localhost:5173` y tu dominio de producción
+   en *Authentication → URL Configuration → Redirect URLs*. Mientras esté
+   deshabilitado, el botón muestra un mensaje explicándolo y email/contraseña
+   sigue funcionando.
+
+## Publicar
+
+Es una SPA estática más Supabase: no hay servidor propio, sólo archivos. Cualquier
+hosting estático sirve — hay un `vercel.json` listo con reescritura SPA, cabeceras
+de caché y cabeceras de seguridad.
+
+**HTTPS es obligatorio, no una mejora.** Notificaciones, Wake Lock y portapapeles
+sólo funcionan en contexto seguro. `localhost` está exento por decisión del
+navegador; un dominio por HTTP plano rompe las tres funciones en silencio.
+
+### Vercel
+
+```bash
+npm i -g vercel
+vercel            # primera vez: crea el proyecto
+vercel --prod     # publica
+```
+
+Las variables van en el dashboard (*Settings → Environment Variables*), **no** en
+el repo: `.env.local` está en `.gitignore`, y como Vite las inlinea en tiempo de
+build tienen que existir en el entorno del build o el bundle sale sin ellas y la
+app arranca en modo invitado permanente.
+
+```
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+### Caché de los sonidos ambiente
+
+`vercel.json` les da una regla propia. Los `.m4a` viven en `public/`, así que Vite
+no les pone hash en el nombre y **no pueden ser `immutable`**: si el contenido
+cambia, el nombre sigue igual y el navegador serviría el viejo para siempre. Van
+con una semana de caché firme más un mes sirviendo el viejo mientras revalida de
+fondo — son ~4,8 MB, el 90 % del deploy, y no conviene rebajarlos seguido.
+
+Si los regenerás con `tools/build-ambient.sh`, o les cambiás el nombre o esperás
+la semana.
+
+(El esquema de `vercel.json` no admite una clave `comment` dentro de `headers`, y
+JSON no tiene comentarios: por eso esta explicación vive acá y no en el archivo.)
+
+### Otros hosts
+
+| Host | Config equivalente |
+|---|---|
+| Cloudflare Pages | build `npm run build`, salida `dist`; el fallback SPA es automático |
+| Netlify | `_redirects` con `/*  /index.html  200` |
+| GitHub Pages | necesita `base` en `vite.config.ts` si es project page, y un workflow para inyectar las variables |
+
+### Después de publicar: dos cosas en Supabase
+
+En *Authentication → URL Configuration*:
+
+- **Site URL** → tu dominio de producción
+- **Redirect URLs** → agregá `https://tu-dominio/**` **sin borrar** el de
+  `localhost`, o se rompe el login en desarrollo
+
+En Google Cloud **no hay que tocar nada**: la URI de retorno registrada allá apunta
+al callback de Supabase, no a tu dominio. Supabase es el que redirige después.
+
+### Sobre las salas compartidas
+
+Los links que genere el host usan `window.location.origin`, así que en producción
+salen con el dominio real automáticamente. Un link creado en `localhost` sólo
+funciona en esa máquina — es esperable, no un bug.
+
 ## Estructura
 
 ```
 src/
 ├── audio/        context.ts · alarm.ts · ambient.ts · youtube.ts
-├── components/   layout/ · timer/ · presets/ · focus/ · audio/ · stats/ · settings/ · ui/
+├── components/   layout/ · timer/ · presets/ · focus/ · audio/ · stats/
+│                 auth/ · settings/ · ui/
 ├── hooks/        useTimerEngine · useSmoothClock · useKeyboardShortcuts
 │                 useWakeLock · useTheme · useMediaQuery · useAmbientSync
+│                 useCloudSync
+├── lib/          supabase.ts
+├── rooms/        roomClient.ts · types.ts
 ├── skins/        registry.ts + 6 skins + geometry.ts
 ├── store/        timerStore · presetsStore · settingsStore · audioStore
-│                 statsStore · uiStore
+│                 statsStore · authStore · roomStore · uiStore
+├── sync/         mappers.ts · syncEngine.ts
 ├── themes/       palettes.ts · theme.css
 ├── types/        timer.ts · theme.ts · stats.ts
 └── utils/        time · id · cn · notifications

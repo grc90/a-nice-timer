@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type OverlayId = 'settings' | 'shortcuts' | 'stats' | null;
+export type OverlayId = 'settings' | 'shortcuts' | 'stats' | 'auth' | 'share' | null;
 
 interface UiState {
   /** Modo concentración: la UI desaparece salvo el timer. */
