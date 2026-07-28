@@ -84,15 +84,15 @@ Adding a skin: component satisfying `SkinProps` + id in `SkinId` + entry in [src
 
 ### Mobile
 
-Three rules, and each one exists because breaking it produced a concrete bug:
-
 **The dial is measured against viewport height, not just width.** `TimerStage` is `aspect-square w-full`, so a plain `max-w-sm` makes it as tall as the phone is wide and pushes "Iniciar" below the fold — the first screen showed a clock with no visible way to start it. Both [App.tsx](src/App.tsx) and `RoomViewer` cap it with `max-w-[min(20rem,44dvh)]`. It has to be `dvh` and not `vh`: the browser's address bar is exactly the difference that decides whether the button fits. In `RoomViewer` the cap goes on the *column*, not on the skin, because that column is the container-query context `DigitalSkin` scales its type against.
 
-**Tapping the dial is the primary action**, and only while the timer is not running — a stray tap must not be able to pause a session. It lives in `App.tsx` and not in `TimerStage` because `RoomViewer` shares that component and is read-only by construction.
+**Inicio rápido lives in the primary column, right under `TimerControls`, in the same DOM order on every breakpoint** — not in the `aside` with `TodayCard`/`PresetList`, which stacks below the fold on a phone. "Start something new" is as primary as pausing the running session, so it sits next to the controls instead of being reached only by scrolling. Deliberately *not* solved with responsive reordering (`order-*` swapped per breakpoint): see the next paragraph for why that class of fix is now treated as a red flag here.
 
 **Touch targets: `TOUCH_ICON` / `TOUCH_BUTTON`** in [src/components/ui/Button.tsx](src/components/ui/Button.tsx). Controls default to size `md` (40 px) and *shrink* at `sm:`, instead of the reverse — the size depends on the breakpoint, which the `size` prop cannot express. They rely on Tailwind emitting responsive variants after base utilities, so `sm:size-8` wins over `size-10` at equal specificity (verified in the built CSS: base utilities at ~10 kB, the `@media(min-width:40rem)` block at ~32 kB).
 
 The top bar cannot show eight icons on a phone at a usable size, so everything that is not audio or focus mode folds into `MoreMenu`; desktop renders the same `BarAction[]` as loose icons. One list, two renderings — a new action can't land in only one of them.
+
+**`hidden` cannot be layered directly onto `Button`/`IconButton` to hide them responsively.** Both components hardcode `inline-flex` unconditionally in their own base classes, and in the compiled CSS that unconditional `.inline-flex` sits *after* `.hidden` — so at equal specificity it always wins, regardless of screen width, and `hidden sm:inline-flex` on the component never hides anything (this shipped once: every desktop top-bar icon rendered on mobile at once, overflowing the bar). The fix is a wrapper `<div>` that owns the `hidden`/`flex` toggle and carries no competing display utility of its own — never put `hidden` on the button itself.
 
 ### Theming
 

@@ -196,32 +196,6 @@ export default function App() {
                     el botón entra. */}
                 <div className="relative w-full max-w-[min(20rem,44dvh)] sm:max-w-[min(24rem,52dvh)] md:max-w-sm">
                   <TimerStage className="w-full" />
-
-                  {/* Toque en la esfera = acción primaria.
-                      En mobile no hay hover ni teclado que sugieran nada, y lo
-                      único que se ve es el reloj: tiene que ser accionable. Va
-                      acá y no dentro de `TimerStage` porque esa capa la comparte
-                      el visor de salas, que es de sólo lectura por construcción.
-                      Sólo mientras no corre: con la sesión andando, un toque
-                      accidental en la pantalla no puede pausarla. */}
-                  {status !== 'running' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void unlockAudio();
-                        useTimerStore.getState().toggle();
-                      }}
-                      aria-label={status === 'paused' ? 'Reanudar' : 'Iniciar'}
-                      // El cartel queda a media altura entre los dígitos y el
-                      // borde de la esfera: más abajo se monta sobre el trazo
-                      // del anillo, más arriba pisa la hora.
-                      className="absolute inset-0 flex items-end justify-center rounded-full pb-[22%] md:hidden"
-                    >
-                      <span className="anim-fade-in rounded-full border border-line/70 bg-surface-2/80 px-3 py-1 text-[0.6875rem] font-medium text-muted backdrop-blur-sm">
-                        Tocá para {status === 'paused' ? 'reanudar' : 'empezar'}
-                      </span>
-                    </button>
-                  )}
                 </div>
                 <SkinSwitcher />
               </div>
@@ -229,15 +203,14 @@ export default function App() {
               <PomodoroTracker />
               <TimerControls />
 
-              <p className="hidden items-center gap-1.5 text-xs text-faint md:flex">
-                <Kbd>Espacio</Kbd> pausar · <Kbd>F</Kbd> concentración · <Kbd>?</Kbd> atajos
-              </p>
-            </section>
-
-            <aside className="flex flex-col gap-8">
-              <TodayCard />
-
-              <section className="flex flex-col gap-3">
+              {/* Vive acá, pegado a los controles, y no en la columna lateral:
+                  en mobile esa columna cae debajo del pliegue, y "empezar algo
+                  nuevo" es tan primario como pausar o reiniciar la sesión en
+                  curso. Mismo orden en mobile y en desktop a propósito —nada de
+                  reordenar por breakpoint con `order`/`hidden`, que es
+                  justo la clase de regla condicional que ya dio un bug de
+                  cascada en la barra superior. */}
+              <section className="flex w-full flex-col gap-3">
                 <h2 className="text-sm font-medium tracking-tight text-ink">Inicio rápido</h2>
                 <div className="grid grid-cols-4 gap-2">
                   {QUICK_DURATIONS.map((minutes) => (
@@ -257,6 +230,13 @@ export default function App() {
                 </div>
               </section>
 
+              <p className="hidden items-center gap-1.5 text-xs text-faint md:flex">
+                <Kbd>Espacio</Kbd> pausar · <Kbd>F</Kbd> concentración · <Kbd>?</Kbd> atajos
+              </p>
+            </section>
+
+            <aside className="flex flex-col gap-8">
+              <TodayCard />
               <PresetList />
             </aside>
           </div>
