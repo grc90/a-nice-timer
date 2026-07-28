@@ -1,0 +1,305 @@
+/**
+ * Tokens de color de la aplicación.
+ *
+ * Todo se expresa como variables CSS semánticas (`--c-*`) para que agregar una
+ * paleta nueva sea copiar un bloque y cambiar valores: ningún componente conoce
+ * un color literal. Los valores están en oklch porque mantiene la luminosidad
+ * percibida constante al rotar el tono, así todas las paletas se sienten igual
+ * de contrastadas sin recalibrar cada una a mano.
+ *
+ * Convención: `[data-palette="X"][data-theme="Y"]`, ambos atributos viven en
+ * <html> y los escribe settingsStore.
+ */
+
+:root {
+  /* Colores de fase: se mantienen fuera de las paletas a propósito. El acento
+     cambia con la paleta, pero foco/descanso deben seguir siendo distinguibles
+     entre sí en las 5 paletas, así que se anclan a tonos fijos. */
+  --c-phase-focus: var(--c-accent);
+  --c-phase-short: oklch(0.76 0.12 168);
+  --c-phase-long: oklch(0.72 0.13 292);
+
+  --c-danger: oklch(0.68 0.18 25);
+  --c-success: oklch(0.72 0.15 150);
+
+  /* Radios y sombras compartidos */
+  --radius-card: 1rem;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.06), 0 16px 40px -16px rgb(0 0 0 / 0.28);
+}
+
+/**
+ * Aurora del fondo.
+ *
+ * Cada paleta define sus propios cinco tonos, y no hay un juego global: el fondo
+ * tiene que pertenecer a la paleta elegida, no convivir con ella. Los cinco tonos
+ * de cada juego son análogos al acento —vecinos suyos en la rueda— más una banda
+ * cálida de contrapunto, que es lo que evita que el conjunto se lea como una sola
+ * mancha del color del acento.
+ *
+ * Sobre el modo de mezcla: la máscara de `.aurora` convierte a la capa en un
+ * grupo aislado, así que `screen` mezcla las bandas **entre sí** y no contra el
+ * fondo de la página. Sirve igual —evita que los cruces se ensucien y los deja
+ * más luminosos— pero no es el brillo aditivo contra el fondo que uno esperaría.
+ * En claro ese realce entre bandas no aporta nada sobre blanco, así que se pintan
+ * normales.
+ *
+ * De ahí que en claro los tonos no puedan ser pastel: contra un fondo casi blanco
+ * un pastel a opacidad baja es invisible. Necesitan luminosidad media y mucha
+ * saturación para separarse del papel.
+ */
+:root {
+  --aurora-blend: screen;
+  --aurora-strength: 0.52;
+}
+
+[data-theme='light'] {
+  --c-phase-short: oklch(0.56 0.12 168);
+  --c-phase-long: oklch(0.54 0.15 292);
+  --c-danger: oklch(0.55 0.19 25);
+  --c-success: oklch(0.55 0.14 150);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.05), 0 8px 24px -14px rgb(0 0 0 / 0.14);
+
+  --aurora-blend: normal;
+  /* Más fuerza que en oscuro, no menos: sobre blanco hay que restar luz para que
+     se vea color, y eso arranca con más opacidad que sumarla sobre negro. */
+  --aurora-strength: 0.55;
+}
+
+/* ── Minimal ─────────────────────────────────────────────────────────────── */
+
+[data-palette='minimal'][data-theme='dark'] {
+  --c-bg: oklch(0.16 0.005 260);
+  --c-surface: oklch(0.2 0.006 260);
+  --c-surface-2: oklch(0.245 0.008 260);
+  --c-border: oklch(0.3 0.01 260);
+  --c-text: oklch(0.96 0.003 260);
+  --c-text-muted: oklch(0.72 0.008 260);
+  --c-text-faint: oklch(0.55 0.01 260);
+  --c-accent: oklch(0.72 0.1 245);
+  --c-accent-soft: oklch(0.32 0.05 245);
+  --c-accent-contrast: oklch(0.16 0.01 260);
+}
+
+[data-palette='minimal'][data-theme='light'] {
+  --c-bg: oklch(0.985 0.002 260);
+  --c-surface: oklch(1 0 0);
+  --c-surface-2: oklch(0.965 0.003 260);
+  --c-border: oklch(0.9 0.005 260);
+  --c-text: oklch(0.22 0.01 260);
+  --c-text-muted: oklch(0.48 0.01 260);
+  --c-text-faint: oklch(0.65 0.01 260);
+  --c-accent: oklch(0.52 0.13 250);
+  --c-accent-soft: oklch(0.93 0.03 250);
+  --c-accent-contrast: oklch(0.99 0 0);
+}
+
+/* ── Sunset ──────────────────────────────────────────────────────────────── */
+
+[data-palette='sunset'][data-theme='dark'] {
+  --c-bg: oklch(0.17 0.02 40);
+  --c-surface: oklch(0.215 0.025 40);
+  --c-surface-2: oklch(0.26 0.03 38);
+  --c-border: oklch(0.33 0.035 40);
+  --c-text: oklch(0.96 0.01 60);
+  --c-text-muted: oklch(0.75 0.02 50);
+  --c-text-faint: oklch(0.58 0.025 45);
+  --c-accent: oklch(0.75 0.16 45);
+  --c-accent-soft: oklch(0.34 0.08 40);
+  --c-accent-contrast: oklch(0.18 0.03 40);
+}
+
+[data-palette='sunset'][data-theme='light'] {
+  --c-bg: oklch(0.985 0.012 70);
+  --c-surface: oklch(1 0.004 70);
+  --c-surface-2: oklch(0.96 0.018 65);
+  --c-border: oklch(0.9 0.025 60);
+  --c-text: oklch(0.26 0.04 40);
+  --c-text-muted: oklch(0.5 0.04 45);
+  --c-text-faint: oklch(0.68 0.035 50);
+  --c-accent: oklch(0.62 0.17 40);
+  --c-accent-soft: oklch(0.93 0.05 50);
+  --c-accent-contrast: oklch(0.99 0.005 70);
+}
+
+/* ── Ocean ───────────────────────────────────────────────────────────────── */
+
+[data-palette='ocean'][data-theme='dark'] {
+  --c-bg: oklch(0.165 0.02 235);
+  --c-surface: oklch(0.21 0.025 235);
+  --c-surface-2: oklch(0.255 0.03 233);
+  --c-border: oklch(0.32 0.035 232);
+  --c-text: oklch(0.96 0.01 220);
+  --c-text-muted: oklch(0.75 0.02 225);
+  --c-text-faint: oklch(0.58 0.025 228);
+  --c-accent: oklch(0.76 0.12 205);
+  --c-accent-soft: oklch(0.32 0.06 210);
+  --c-accent-contrast: oklch(0.16 0.03 235);
+}
+
+[data-palette='ocean'][data-theme='light'] {
+  --c-bg: oklch(0.985 0.008 215);
+  --c-surface: oklch(1 0.003 215);
+  --c-surface-2: oklch(0.96 0.014 212);
+  --c-border: oklch(0.9 0.02 210);
+  --c-text: oklch(0.24 0.03 230);
+  --c-text-muted: oklch(0.48 0.03 225);
+  --c-text-faint: oklch(0.66 0.03 220);
+  --c-accent: oklch(0.55 0.13 215);
+  --c-accent-soft: oklch(0.93 0.04 210);
+  --c-accent-contrast: oklch(0.99 0.004 215);
+}
+
+/* ── Forest ──────────────────────────────────────────────────────────────── */
+
+[data-palette='forest'][data-theme='dark'] {
+  --c-bg: oklch(0.16 0.018 150);
+  --c-surface: oklch(0.205 0.022 150);
+  --c-surface-2: oklch(0.25 0.026 148);
+  --c-border: oklch(0.315 0.03 148);
+  --c-text: oklch(0.955 0.01 140);
+  --c-text-muted: oklch(0.74 0.018 145);
+  --c-text-faint: oklch(0.57 0.022 146);
+  --c-accent: oklch(0.74 0.13 148);
+  --c-accent-soft: oklch(0.31 0.06 150);
+  --c-accent-contrast: oklch(0.16 0.025 150);
+  /* El acento ya es verde: corro el descanso corto hacia el ámbar para que la
+     fase siga leyéndose de un vistazo. */
+  --c-phase-short: oklch(0.78 0.13 75);
+}
+
+[data-palette='forest'][data-theme='light'] {
+  --c-bg: oklch(0.985 0.008 145);
+  --c-surface: oklch(1 0.003 145);
+  --c-surface-2: oklch(0.96 0.014 143);
+  --c-border: oklch(0.9 0.02 142);
+  --c-text: oklch(0.24 0.03 150);
+  --c-text-muted: oklch(0.47 0.03 148);
+  --c-text-faint: oklch(0.65 0.03 146);
+  --c-accent: oklch(0.5 0.12 150);
+  --c-accent-soft: oklch(0.93 0.04 145);
+  --c-accent-contrast: oklch(0.99 0.004 145);
+  --c-phase-short: oklch(0.58 0.13 75);
+}
+
+/* ── Midnight ────────────────────────────────────────────────────────────── */
+
+[data-palette='midnight'][data-theme='dark'] {
+  --c-bg: oklch(0.13 0.025 285);
+  --c-surface: oklch(0.175 0.03 285);
+  --c-surface-2: oklch(0.22 0.035 283);
+  --c-border: oklch(0.29 0.04 282);
+  --c-text: oklch(0.95 0.012 285);
+  --c-text-muted: oklch(0.72 0.025 285);
+  --c-text-faint: oklch(0.55 0.03 285);
+  --c-accent: oklch(0.7 0.15 290);
+  --c-accent-soft: oklch(0.3 0.08 288);
+  --c-accent-contrast: oklch(0.13 0.03 285);
+  /* Mismo caso que Forest, en espejo: el acento es violeta, así que el descanso
+     largo se corre al rosa. */
+  --c-phase-long: oklch(0.74 0.14 350);
+}
+
+[data-palette='midnight'][data-theme='light'] {
+  --c-bg: oklch(0.98 0.008 285);
+  --c-surface: oklch(1 0.003 285);
+  --c-surface-2: oklch(0.955 0.015 285);
+  --c-border: oklch(0.895 0.022 285);
+  --c-text: oklch(0.22 0.04 285);
+  --c-text-muted: oklch(0.46 0.04 285);
+  --c-text-faint: oklch(0.65 0.035 285);
+  --c-accent: oklch(0.52 0.17 288);
+  --c-accent-soft: oklch(0.93 0.05 288);
+  --c-accent-contrast: oklch(0.99 0.004 285);
+  --c-phase-long: oklch(0.56 0.16 350);
+}
+
+/* ── Tonos de la aurora, por paleta ──────────────────────────────────────────
+ *
+ * Cinco tonos por paleta: cuatro análogos al acento y uno cálido de
+ * contrapunto. Ese quinto es el que le da profundidad — sin él, cuatro vecinos
+ * del mismo tono se funden en una sola mancha y se pierde el efecto de cortinas
+ * cruzándose.
+ *
+ * Agregar una paleta nueva son estos dos bloques más los que ya pedía el tema.
+ */
+
+/* Minimal — azul grafito, con ámbar de contrapunto. */
+[data-palette='minimal'][data-theme='dark'] {
+  --aurora-1: hsl(224 86% 62%);
+  --aurora-2: hsl(258 72% 64%);
+  --aurora-3: hsl(198 84% 58%);
+  --aurora-4: hsl(286 60% 60%);
+  --aurora-5: hsl(30 88% 58%);
+}
+[data-palette='minimal'][data-theme='light'] {
+  --aurora-1: hsl(224 88% 64%);
+  --aurora-2: hsl(258 78% 66%);
+  --aurora-3: hsl(198 88% 56%);
+  --aurora-4: hsl(286 68% 64%);
+  --aurora-5: hsl(30 92% 60%);
+}
+
+/* Sunset — cálida de punta a punta; acá el contrapunto es el magenta. */
+[data-palette='sunset'][data-theme='dark'] {
+  --aurora-1: hsl(28 92% 58%);
+  --aurora-2: hsl(348 80% 60%);
+  --aurora-3: hsl(46 95% 60%);
+  --aurora-4: hsl(8 88% 56%);
+  --aurora-5: hsl(312 64% 58%);
+}
+[data-palette='sunset'][data-theme='light'] {
+  --aurora-1: hsl(28 94% 58%);
+  --aurora-2: hsl(348 86% 64%);
+  --aurora-3: hsl(44 96% 54%);
+  --aurora-4: hsl(8 90% 60%);
+  --aurora-5: hsl(312 70% 62%);
+}
+
+/* Ocean — cian y azul, con coral de contrapunto. */
+[data-palette='ocean'][data-theme='dark'] {
+  --aurora-1: hsl(196 88% 56%);
+  --aurora-2: hsl(172 74% 50%);
+  --aurora-3: hsl(216 84% 62%);
+  --aurora-4: hsl(250 64% 62%);
+  --aurora-5: hsl(22 88% 58%);
+}
+[data-palette='ocean'][data-theme='light'] {
+  --aurora-1: hsl(196 90% 52%);
+  --aurora-2: hsl(172 80% 44%);
+  --aurora-3: hsl(216 88% 62%);
+  --aurora-4: hsl(250 70% 66%);
+  --aurora-5: hsl(22 92% 58%);
+}
+
+/* Forest — verdes, con dorado y ámbar de contrapunto. */
+[data-palette='forest'][data-theme='dark'] {
+  --aurora-1: hsl(148 68% 46%);
+  --aurora-2: hsl(96 62% 48%);
+  --aurora-3: hsl(172 62% 46%);
+  --aurora-4: hsl(48 90% 56%);
+  --aurora-5: hsl(26 86% 56%);
+}
+[data-palette='forest'][data-theme='light'] {
+  --aurora-1: hsl(148 70% 42%);
+  --aurora-2: hsl(96 66% 44%);
+  --aurora-3: hsl(172 68% 42%);
+  --aurora-4: hsl(48 92% 50%);
+  --aurora-5: hsl(26 90% 56%);
+}
+
+/* Midnight — violetas y magentas, con ámbar de contrapunto. */
+[data-palette='midnight'][data-theme='dark'] {
+  --aurora-1: hsl(272 76% 62%);
+  --aurora-2: hsl(302 66% 58%);
+  --aurora-3: hsl(238 78% 64%);
+  --aurora-4: hsl(330 78% 62%);
+  --aurora-5: hsl(20 86% 58%);
+}
+[data-palette='midnight'][data-theme='light'] {
+  --aurora-1: hsl(272 80% 66%);
+  --aurora-2: hsl(302 70% 60%);
+  --aurora-3: hsl(238 82% 66%);
+  --aurora-4: hsl(330 82% 62%);
+  --aurora-5: hsl(22 90% 58%);
+}

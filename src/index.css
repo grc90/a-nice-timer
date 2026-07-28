@@ -1,0 +1,421 @@
+@import 'tailwindcss';
+@import './themes/theme.css';
+
+/* Puente entre los tokens semánticos y las utilidades de Tailwind: esto habilita
+   `bg-surface`, `text-muted`, `border-line`, etc. `inline` hace que Tailwind
+   emita la referencia var() tal cual, así el cambio de paleta en runtime es
+   instantáneo y no necesita reconstruir clases. */
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-line: var(--c-border);
+  --color-ink: var(--c-text);
+  --color-muted: var(--c-text-muted);
+  --color-faint: var(--c-text-faint);
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-accent-contrast: var(--c-accent-contrast);
+  --color-phase-focus: var(--c-phase-focus);
+  --color-phase-short: var(--c-phase-short);
+  --color-phase-long: var(--c-phase-long);
+  --color-danger: var(--c-danger);
+  --color-success: var(--c-success);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--c-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  /* La transición de tema es sólo de color: animar `all` acá haría que cada
+     cambio de layout del timer pase por un tween de 200 ms. */
+  body,
+  [data-theme] {
+    transition:
+      background-color 240ms ease,
+      color 240ms ease;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Los dígitos del timer no deben "bailar" al cambiar de número. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/**
+ * Respeta la preferencia del sistema por movimiento reducido.
+ *
+ * `.aurora__band` queda excluida porque su movimiento lo decide un ajuste
+ * explícito de la app, no esta regla. Es el patrón correcto para algo decorativo
+ * y opcional: el sistema manda por defecto, pero una elección deliberada del
+ * usuario puede sobreescribirla. Todo el resto de la interfaz —transiciones,
+ * skins, microanimaciones— sigue obedeciendo al sistema sin excepción.
+ *
+ * En Windows esta preferencia se activa al apagar "Efectos de animación" en
+ * Accesibilidad, que mucha gente desactiva por rendimiento sin relacionarlo con
+ * fondos animados.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.aurora__band),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes ant-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ant-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ant-pulse-ring {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+/* ── Aurora del fondo ──────────────────────────────────────────────────────
+ *
+ * Cinco cortinas de luz que se cruzan muy despacio. Los tonos salen de la paleta
+ * activa; están definidos en themes/theme.css.
+ *
+ * Tres decisiones de rendimiento, porque esto tiene que correr 90 minutos
+ * seguidos sin calentar el equipo:
+ *
+ * 1. Se animan **sólo `transform` y `opacity`**, las dos únicas propiedades que
+ *    el compositor resuelve en la GPU sin repintar ni recalcular layout. Animar
+ *    `background-position` sobre gradientes a pantalla completa, que es la forma
+ *    habitual de hacer esto, repinta cada frame y es lo que hace que estos fondos
+ *    tengan mala fama.
+ * 2. **Sin `filter: blur()`.** Difuminar una capa de pantalla completa cuesta en
+ *    cada frame. Los gradientes radiales ya salen suaves de fábrica: el degradado
+ *    hasta `transparent` hace el mismo trabajo gratis.
+ * 3. `contain` acota la capa: el navegador sabe que nada de acá adentro puede
+ *    afectar al layout del resto y se ahorra el chequeo.
+ *
+ * Los ciclos van de 19 a 37 segundos, y son números primos entre sí a propósito:
+ * el patrón combinado tarda horas en repetirse, así que nunca se percibe un loop.
+ * El recorrido de cada banda ronda un 40 % de su propio ancho, que sobre bandas
+ * de 60-88 vw da unos 25 vw de viaje: suficiente para que el movimiento se lea
+ * sin llegar a pedir atención.
+ */
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  /* `layout paint style` y no `strict`: `strict` suma contención de tamaño, que
+     acá no aporta —el tamaño sale de los insets, no del contenido— y complica
+     el cálculo sin beneficio. */
+  contain: layout paint style;
+
+  /* Vacía el centro y deja la luz en los bordes. Sin esto la aurora pasaría por
+     detrás del timer y le restaría contraste justo donde más se mira. */
+  mask-image: radial-gradient(ellipse 78% 62% at 50% 42%, transparent 8%, #000 72%);
+  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 42%, transparent 8%, #000 72%);
+}
+
+.aurora__band {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: var(--aurora-blend);
+  will-change: transform, opacity;
+
+  /* `--aurora-intensity` la escribe el componente desde los ajustes. Va en la
+     banda y no en el contenedor para que cada una pueda animar su propia
+     opacidad: bajarla en el padre aplanaría las cinco por igual y se perdería el
+     encendido y apagado escalonado de las cortinas. */
+  --band-opacity: calc(var(--aurora-strength) * var(--aurora-intensity, 1));
+  opacity: var(--band-opacity);
+}
+
+.aurora__band:nth-child(1) {
+  width: 78vw;
+  height: 52vh;
+  top: -14vh;
+  left: -12vw;
+  background: radial-gradient(closest-side, var(--aurora-1), transparent);
+}
+
+.aurora__band:nth-child(2) {
+  width: 66vw;
+  height: 46vh;
+  top: -6vh;
+  right: -14vw;
+  background: radial-gradient(closest-side, var(--aurora-2), transparent);
+}
+
+.aurora__band:nth-child(3) {
+  width: 88vw;
+  height: 40vh;
+  top: 20vh;
+  left: -20vw;
+  background: radial-gradient(closest-side, var(--aurora-3), transparent);
+}
+
+.aurora__band:nth-child(4) {
+  width: 70vw;
+  height: 54vh;
+  bottom: -18vh;
+  right: -10vw;
+  background: radial-gradient(closest-side, var(--aurora-4), transparent);
+}
+
+.aurora__band:nth-child(5) {
+  width: 60vw;
+  height: 44vh;
+  bottom: -12vh;
+  left: -8vw;
+  background: radial-gradient(closest-side, var(--aurora-5), transparent);
+}
+
+/* Quieta por defecto; el componente agrega la clase cuando corresponde animar. */
+.aurora--animated .aurora__band:nth-child(1) {
+  animation: aurora-a 19s ease-in-out infinite alternate;
+}
+.aurora--animated .aurora__band:nth-child(2) {
+  animation: aurora-b 23s ease-in-out infinite alternate;
+}
+.aurora--animated .aurora__band:nth-child(3) {
+  animation: aurora-c 29s ease-in-out infinite alternate;
+}
+.aurora--animated .aurora__band:nth-child(4) {
+  animation: aurora-d 31s ease-in-out infinite alternate;
+}
+.aurora--animated .aurora__band:nth-child(5) {
+  animation: aurora-e 37s ease-in-out infinite alternate;
+}
+
+/**
+ * La promoción a capa de GPU la garantiza `will-change` en `.aurora__band`, no
+ * el viejo truco de `translate3d`: el minificador colapsa `translate3d(x,y,0)` a
+ * `translate(x,y)` en el build, así que confiar en eso sería confiar en algo que
+ * no sobrevive a producción.
+ *
+ * La opacidad también se anima —es la otra propiedad que el compositor resuelve
+ * sin repintar— porque una cortina que se enciende y se apaga es la mitad del
+ * efecto. Sólo con desplazamiento el fondo parece un gradiente arrastrándose.
+ */
+@keyframes aurora-a {
+  from {
+    transform: translate3d(-20%, -12%, 0) rotate(-20deg) scale(0.92);
+    opacity: calc(var(--band-opacity) * 0.68);
+  }
+  to {
+    transform: translate3d(24%, 14%, 0) rotate(8deg) scale(1.34);
+    opacity: var(--band-opacity);
+  }
+}
+
+@keyframes aurora-b {
+  from {
+    transform: translate3d(22%, -16%, 0) rotate(16deg) scale(1.28);
+    opacity: var(--band-opacity);
+  }
+  to {
+    transform: translate3d(-24%, 18%, 0) rotate(-14deg) scale(0.9);
+    opacity: calc(var(--band-opacity) * 0.68);
+  }
+}
+
+@keyframes aurora-c {
+  from {
+    transform: translate3d(-26%, 14%, 0) rotate(4deg) scale(0.94);
+    opacity: calc(var(--band-opacity) * 0.72);
+  }
+  to {
+    transform: translate3d(26%, -18%, 0) rotate(24deg) scale(1.3);
+    opacity: var(--band-opacity);
+  }
+}
+
+@keyframes aurora-d {
+  from {
+    transform: translate3d(18%, 20%, 0) rotate(-16deg) scale(1.02);
+    opacity: var(--band-opacity);
+  }
+  to {
+    transform: translate3d(-26%, -16%, 0) rotate(14deg) scale(1.38);
+    opacity: calc(var(--band-opacity) * 0.68);
+  }
+}
+
+@keyframes aurora-e {
+  from {
+    transform: translate3d(-22%, 16%, 0) rotate(20deg) scale(1.2);
+    opacity: calc(var(--band-opacity) * 0.68);
+  }
+  to {
+    transform: translate3d(24%, -18%, 0) rotate(-18deg) scale(0.92);
+    opacity: var(--band-opacity);
+  }
+}
+
+/**
+ * Composición estática, para cuando el movimiento está apagado.
+ *
+ * No basta con quitar la animación: sin transform las cinco bandas quedan en su
+ * posición de reposo, apiladas y sin cruzarse. Esto las abre a mano en un
+ * arreglo que se ve bien quieto.
+ */
+.aurora:not(.aurora--animated) .aurora__band:nth-child(1) {
+  transform: translate3d(2%, 0, 0) rotate(-8deg) scale(1.08);
+}
+.aurora:not(.aurora--animated) .aurora__band:nth-child(2) {
+  transform: translate3d(-2%, 2%, 0) rotate(4deg) scale(1.04);
+}
+.aurora:not(.aurora--animated) .aurora__band:nth-child(3) {
+  transform: translate3d(4%, -2%, 0) rotate(11deg) scale(1.06);
+}
+.aurora:not(.aurora--animated) .aurora__band:nth-child(4) {
+  transform: translate3d(-4%, 0, 0) rotate(0deg) scale(1.12);
+}
+.aurora:not(.aurora--animated) .aurora__band:nth-child(5) {
+  transform: translate3d(0, -1%, 0) rotate(2deg) scale(1.02);
+}
+
+/* Los dos puntos del reloj digital: un ciclo lento, no un parpadeo nervioso. */
+@keyframes ant-blink {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+/* Granos de arena. `--fall-distance` la fija la skin según cuánto montículo
+   se acumuló, así el grano nunca cae dentro de la arena ya depositada. */
+@keyframes ant-sand-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(var(--fall-distance, 60px));
+    opacity: 0;
+  }
+}
+
+/* Anillo de impacto donde el chorro golpea el montículo. */
+@keyframes ant-sand-impact {
+  0% {
+    opacity: 0.5;
+    transform: scaleX(0.4);
+  }
+  60% {
+    opacity: 0.18;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.25);
+  }
+}
+
+@keyframes ant-twinkle {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.anim-fade-in {
+  animation: ant-fade-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-scale-in {
+  animation: ant-scale-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
