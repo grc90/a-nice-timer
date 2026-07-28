@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
-import { IconButton } from './Button';
+import { IconButton, TOUCH_ICON } from './Button';
 import { CloseIcon } from './Icons';
 
 interface ModalProps {
@@ -75,7 +75,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             <h2 className="text-lg font-medium tracking-tight text-ink">{title}</h2>
             {description && <p className="mt-1 text-sm text-muted">{description}</p>}
           </div>
-          <IconButton label="Cerrar" onClick={onClose} size="sm">
+          <IconButton label="Cerrar" onClick={onClose} className={TOUCH_ICON}>
             <CloseIcon />
           </IconButton>
         </header>

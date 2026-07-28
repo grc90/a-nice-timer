@@ -23,6 +23,19 @@ const SIZES: Record<Size, string> = {
   lg: 'h-12 px-6 text-base gap-2.5 rounded-2xl',
 };
 
+/**
+ * Controles cómodos para el pulgar en mobile y compactos en desktop.
+ *
+ * Van como `className` sobre el tamaño `md` —40 px, el piso razonable de un
+ * blanco táctil— y lo achican a partir de `sm`, donde apunta un mouse. No se
+ * puede expresar con la prop `size` porque el tamaño depende del breakpoint y
+ * no del componente. Funciona sin pelear por especificidad porque Tailwind
+ * emite las variantes responsive después de las utilidades base, así que
+ * `sm:size-8` gana sobre `size-10` aunque ambas midan lo mismo.
+ */
+export const TOUCH_ICON = 'sm:size-8 sm:rounded-lg sm:text-[0.95rem]';
+export const TOUCH_BUTTON = 'sm:h-8 sm:px-3 sm:text-[0.8125rem] sm:gap-1.5 sm:rounded-lg';
+
 export function Button({ variant = 'secondary', size = 'md', icon, className, children, ...props }: ButtonProps) {
   return (
     <button

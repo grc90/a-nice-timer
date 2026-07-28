@@ -26,7 +26,7 @@ export function TodayCard() {
         <button
           type="button"
           onClick={() => openOverlay('stats')}
-          className="rounded-lg px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+          className="-mr-2 rounded-lg px-2 py-2 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-ink sm:-mr-0 sm:py-1"
         >
           Ver estadísticas
         </button>

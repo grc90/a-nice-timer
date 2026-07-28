@@ -3,7 +3,7 @@ import { isCloudConfigured } from '@/lib/supabase';
 import { displayName, useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
 import { runFullSync } from '@/sync/syncEngine';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button, IconButton, TOUCH_BUTTON, TOUCH_ICON } from '@/components/ui/Button';
 import { UserIcon } from '@/components/ui/Icons';
 import { cn } from '@/utils/cn';
 
@@ -56,9 +56,8 @@ export function AccountMenu() {
   if (status !== 'authenticated') {
     return (
       <Button
-        size="sm"
         variant="secondary"
-        className="ml-1"
+        className={`ml-1 ${TOUCH_BUTTON}`}
         onClick={() => openOverlay('auth')}
         disabled={status === 'loading'}
       >
@@ -71,10 +70,9 @@ export function AccountMenu() {
     <div ref={containerRef} className="relative ml-0.5">
       <IconButton
         label={`Cuenta de ${displayName(user)}`}
-        size="sm"
         active={menuOpen}
         onClick={() => setMenuOpen((v) => !v)}
-        className="relative"
+        className={`relative ${TOUCH_ICON}`}
       >
         <UserIcon />
         <span

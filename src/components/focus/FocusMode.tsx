@@ -99,7 +99,10 @@ export function FocusMode() {
         </IconButton>
       </div>
 
-      <TimerStage className="relative z-10 w-full max-w-[min(78vw,60vh)]" />
+      {/* `dvh` y no `vh`: en mobile la pantalla completa del navegador puede no
+          concederse, y ahí `vh` incluye la barra de direcciones y deja los
+          controles fuera de la ventana. */}
+      <TimerStage className="relative z-10 w-full max-w-[min(78vw,52dvh)] sm:max-w-[min(78vw,60dvh)]" />
 
       <div
         className={cn(

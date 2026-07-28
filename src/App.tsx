@@ -26,7 +26,7 @@ import { AuthPanel } from '@/components/auth/AuthPanel';
 import { ShareDialog } from '@/components/rooms/ShareDialog';
 import { StatsPanel } from '@/components/stats/StatsPanel';
 import { TodayCard } from '@/components/stats/TodayCard';
-import { Button } from '@/components/ui/Button';
+import { Button, TOUCH_BUTTON } from '@/components/ui/Button';
 import { Kbd } from '@/components/ui/Field';
 import { cn } from '@/utils/cn';
 import { MINUTE, formatDurationLabel } from '@/utils/time';
@@ -71,7 +71,10 @@ function QuickCustomInput() {
         aria-label="Minutos personalizados (Enter para empezar)"
         title="Escribí los minutos y presioná Enter"
         className={cn(
-          'tabular h-8 w-full rounded-lg border border-line bg-surface-2 px-2 text-center text-[0.8125rem] text-ink',
+          // Mismo alto que los botones de al lado en cada breakpoint: cómodo
+          // para el pulgar en mobile, compacto donde apunta un mouse.
+          'tabular h-10 rounded-xl sm:h-8 sm:rounded-lg',
+          'w-full border border-line bg-surface-2 px-2 text-center text-sm text-ink sm:text-[0.8125rem]',
           'placeholder:text-faint transition-colors',
           'hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25',
           '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
@@ -165,13 +168,13 @@ export default function App() {
       <div inert={focusMode}>
         <TopBar resolvedTheme={resolvedTheme} />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 sm:px-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-10 sm:px-6 sm:pb-16">
           <div className="mb-6 empty:mb-0">
             <InterruptedBanner />
           </div>
 
           <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_19rem] md:gap-12">
-            <section className="flex flex-col items-center gap-7">
+            <section className="flex flex-col items-center gap-5 sm:gap-7">
               <header className="flex flex-col items-center gap-1.5 text-center">
                 <h2 className="text-sm font-medium text-ink">{label}</h2>
                 <p className="text-xs text-faint">
@@ -183,7 +186,43 @@ export default function App() {
               {/* El cambio de skin va acá, pegado a la esfera: el control queda
                   junto a lo que modifica. */}
               <div className="flex w-full flex-col items-center gap-3">
-                <TimerStage className="w-full max-w-sm" />
+                {/* La esfera se mide contra el alto de la ventana y no sólo
+                    contra el ancho. Con `max-w-sm` a secas, en un teléfono la
+                    esfera ocupa todo el ancho disponible y empuja el botón de
+                    iniciar abajo del pliegue: la primera pantalla mostraba un
+                    reloj lindo sin ninguna forma visible de arrancarlo. `dvh`
+                    y no `vh` porque en mobile la barra de direcciones del
+                    navegador se cuenta, y es justo la diferencia que decide si
+                    el botón entra. */}
+                <div className="relative w-full max-w-[min(20rem,44dvh)] sm:max-w-[min(24rem,52dvh)] md:max-w-sm">
+                  <TimerStage className="w-full" />
+
+                  {/* Toque en la esfera = acción primaria.
+                      En mobile no hay hover ni teclado que sugieran nada, y lo
+                      único que se ve es el reloj: tiene que ser accionable. Va
+                      acá y no dentro de `TimerStage` porque esa capa la comparte
+                      el visor de salas, que es de sólo lectura por construcción.
+                      Sólo mientras no corre: con la sesión andando, un toque
+                      accidental en la pantalla no puede pausarla. */}
+                  {status !== 'running' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void unlockAudio();
+                        useTimerStore.getState().toggle();
+                      }}
+                      aria-label={status === 'paused' ? 'Reanudar' : 'Iniciar'}
+                      // El cartel queda a media altura entre los dígitos y el
+                      // borde de la esfera: más abajo se monta sobre el trazo
+                      // del anillo, más arriba pisa la hora.
+                      className="absolute inset-0 flex items-end justify-center rounded-full pb-[22%] md:hidden"
+                    >
+                      <span className="anim-fade-in rounded-full border border-line/70 bg-surface-2/80 px-3 py-1 text-[0.6875rem] font-medium text-muted backdrop-blur-sm">
+                        Tocá para {status === 'paused' ? 'reanudar' : 'empezar'}
+                      </span>
+                    </button>
+                  )}
+                </div>
                 <SkinSwitcher />
               </div>
 
@@ -204,8 +243,8 @@ export default function App() {
                   {QUICK_DURATIONS.map((minutes) => (
                     <Button
                       key={minutes}
-                      size="sm"
                       variant="secondary"
+                      className={TOUCH_BUTTON}
                       onClick={() => {
                         void unlockAudio();
                         startAdHoc(minutes * MINUTE, 'simple', `${minutes} minutos`);

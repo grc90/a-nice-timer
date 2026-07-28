@@ -146,8 +146,12 @@ export function RoomViewer({ roomId }: { roomId: string }) {
 
   return (
     <Shell>
+      {/* Igual que en la pantalla principal, el ancho se mide también contra el
+          alto de la ventana: acá el contenedor de consulta es esta columna, así
+          que limitarla es lo que hace que la esfera —y con ella la tipografía de
+          las skins que escalan con `cqw`— entre entera en un teléfono. */}
       <div
-        className="flex w-full max-w-sm flex-col items-center gap-7"
+        className="flex w-full max-w-[min(24rem,50dvh)] flex-col items-center gap-6 sm:max-w-sm sm:gap-7"
         style={{ '--phase-color': PHASE_COLOR[snapshot.phase], containerType: 'inline-size' } as React.CSSProperties}
       >
         <header className="flex flex-col items-center gap-1.5 text-center">

@@ -3,9 +3,9 @@ import type { SVGProps } from 'react';
 /**
  * Set de iconos inline.
  *
- * Son once iconos: una librería completa sumaría peso y una dependencia más
- * para mantener alineada con React. Todos comparten viewBox y grosor de trazo
- * para que se vean como una familia.
+ * Dibujados a mano uno por uno: una librería completa sumaría peso y una
+ * dependencia más para mantener alineada con React. Todos comparten viewBox y
+ * grosor de trazo para que se vean como una familia.
  */
 
 type IconProps = SVGProps<SVGSVGElement>;
@@ -222,5 +222,13 @@ export const ClockIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7v5l3.5 2" />
+  </Icon>
+);
+
+export const MoreIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    <circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none" />
   </Icon>
 );

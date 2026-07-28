@@ -4,7 +4,7 @@ import { usePresetsStore } from '@/store/presetsStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTimerStore } from '@/store/timerStore';
 import { unlockAudio } from '@/audio/alarm';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button, IconButton, TOUCH_BUTTON, TOUCH_ICON } from '@/components/ui/Button';
 import { CopyIcon, EditIcon, PlayIcon, PlusIcon, TrashIcon } from '@/components/ui/Icons';
 import { PresetEditor } from './PresetEditor';
 import { formatDurationLabel } from '@/utils/time';
@@ -44,7 +44,7 @@ export function PresetList({ className }: { className?: string }) {
     <section className={cn('flex flex-col gap-3', className)} aria-label="Sesiones guardadas">
       <header className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-medium tracking-tight text-ink">Sesiones</h2>
-        <Button size="sm" variant="ghost" icon={<PlusIcon />} onClick={() => openEditor(null)}>
+        <Button variant="ghost" className={TOUCH_BUTTON} icon={<PlusIcon />} onClick={() => openEditor(null)}>
           Nueva
         </Button>
       </header>
@@ -67,7 +67,10 @@ export function PresetList({ className }: { className?: string }) {
                   isActive ? 'border-accent/60 bg-accent-soft/30' : 'border-line hover:border-accent/30',
                 )}
               >
-                <div className="flex items-center gap-3">
+                {/* En mobile los botones bajan a su propia línea: apretados
+                    contra el nombre en la misma fila, o el nombre queda en dos
+                    letras o los botones por debajo del blanco táctil mínimo. */}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{preset.name}</p>
                     <p className="mt-0.5 text-xs text-faint">
@@ -80,32 +83,41 @@ export function PresetList({ className }: { className?: string }) {
                     </p>
                   </div>
 
-                  {/* En mobile los controles quedan siempre visibles: no hay hover. */}
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                    <IconButton label={`Editar ${preset.name}`} size="sm" onClick={() => openEditor(preset)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton label={`Duplicar ${preset.name}`} size="sm" onClick={() => duplicatePreset(preset.id)}>
-                      <CopyIcon />
-                    </IconButton>
+                  <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-0.5">
+                    {/* En mobile los controles quedan siempre visibles: no hay hover. */}
+                    <div className="flex items-center gap-1 opacity-100 transition-opacity sm:gap-0.5 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+                      <IconButton
+                        label={`Editar ${preset.name}`}
+                        onClick={() => openEditor(preset)}
+                        className={TOUCH_ICON}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        label={`Duplicar ${preset.name}`}
+                        onClick={() => duplicatePreset(preset.id)}
+                        className={TOUCH_ICON}
+                      >
+                        <CopyIcon />
+                      </IconButton>
+                      <IconButton
+                        label={`Eliminar ${preset.name}`}
+                        onClick={() => setPendingDelete(confirming ? null : preset.id)}
+                        className={cn(TOUCH_ICON, confirming && 'text-danger')}
+                      >
+                        <TrashIcon />
+                      </IconButton>
+                    </div>
+
                     <IconButton
-                      label={`Eliminar ${preset.name}`}
-                      size="sm"
-                      onClick={() => setPendingDelete(confirming ? null : preset.id)}
-                      className={confirming ? 'text-danger' : undefined}
+                      label={`Iniciar ${preset.name}`}
+                      variant="primary"
+                      onClick={() => handleStart(preset)}
+                      className={TOUCH_ICON}
                     >
-                      <TrashIcon />
+                      <PlayIcon />
                     </IconButton>
                   </div>
-
-                  <IconButton
-                    label={`Iniciar ${preset.name}`}
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleStart(preset)}
-                  >
-                    <PlayIcon />
-                  </IconButton>
                 </div>
 
                 {/* Confirmación en línea: un modal para borrar un preset sería

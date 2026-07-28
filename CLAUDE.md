@@ -48,6 +48,8 @@ Split by write frequency — runtime changes 5×/s and must not rewrite presets 
 
 `timerStore.tick()` sets `lastEvent` (with a monotonic `id` serial). `useTimerEngine` watches it, guards against re-handling via `handledEventId`, then records stats **first and unconditionally** before alarm/notification — the history must not depend on the user having sound enabled. Manual stop/reset also emits an event (`partialFocusEvent`) when ≥1 min of focus elapsed.
 
+System notifications ([src/utils/notifications.ts](src/utils/notifications.ts)) are the tail of that chain and are deliberately best-effort. `requestNotificationPermission()` is only ever called from the settings toggle, i.e. from a user gesture: browsers reject or penalize a prompt fired on load, so never move it to startup. `notify()` returns `null` instead of throwing when permission is missing, and swallows the exception iOS Safari raises without a registered service worker — by then the in-app cue already happened, so a failed notification must not take the phase transition down with it.
+
 ### Stats: two storage layers, local day keys
 
 **The unit of record is the focus block, not the session** — a four-cycle Pomodoro leaves four rows. Every entry is atomic; there is no "in progress" row to update later, so an abandoned session keeps whatever was actually worked.
@@ -64,6 +66,8 @@ Day keys come from `dayKey()` in [src/utils/time.ts](src/utils/time.ts), built f
 
 Handlers are held in a ref so the listener registers **once**; binding them directly would remount the listener 5×/s as the timer ticks. Shortcuts yield to text fields (`isTypingTarget`), timer shortcuts are suppressed while a modal is open, and `Esc` unwinds exactly one layer per press: modal → audio panel → focus mode.
 
+That single rule is only possible because `uiStore` holds **one** `overlay` slot: `openOverlay` replaces whatever was open instead of stacking, so there is never a second modal underneath to reveal. `Modal` therefore does not handle `Esc` itself, and neither should any new panel — the unwinding order lives in `uiStore.escape()` and nowhere else. The audio drawer is separate from `overlay` on purpose: it is meant to stay open while you work, so it is not a modal and does not block timer shortcuts.
+
 ### Singleton hooks mount once, at the root
 
 [src/App.tsx](src/App.tsx) is where `useTheme`, `useTimerEngine`, `useDocumentTitle`, `useAmbientSync`, `useAuthListener`, `useCloudSync`, `useWakeLock`, and `useKeyboardShortcuts` are mounted — each exactly once. They are app-wide engines, not reusable component behavior; a second mount means two tick loops or two debounced pushers. `useAuthListener` is the one that starts the Supabase session listener, so nothing auth-related works if it is dropped. `useWakeLock(keepAwake && status === 'running')` keeps the screen alive during a session (mobile blanks at ~30 s); the API is absent in Firefox and old Safari and fails silently on purpose.
@@ -74,13 +78,29 @@ The three clock/room hooks are deliberately *not* in that list: `useSmoothClock`
 
 `SkinProps` in [src/skins/types.ts](src/skins/types.ts) gives skins `{ progress, remainingMs, totalMs, phase, status, reducedMotion }` and **no store access**. Structural guarantee: a skin cannot mutate a running session. This is also what lets the read-only room viewer render the host's skin from computed props.
 
+The other half of that guarantee is that `skinId` lives in `settingsStore`, not in the timer runtime: switching skins mid-session cannot reach the session state even by accident, and `SkinSwitcher` needs no coordination with `timerStore`.
+
 Adding a skin: component satisfying `SkinProps` + id in `SkinId` + entry in [src/skins/registry.ts](src/skins/registry.ts). Nothing else changes.
+
+### Mobile
+
+Three rules, and each one exists because breaking it produced a concrete bug:
+
+**The dial is measured against viewport height, not just width.** `TimerStage` is `aspect-square w-full`, so a plain `max-w-sm` makes it as tall as the phone is wide and pushes "Iniciar" below the fold — the first screen showed a clock with no visible way to start it. Both [App.tsx](src/App.tsx) and `RoomViewer` cap it with `max-w-[min(20rem,44dvh)]`. It has to be `dvh` and not `vh`: the browser's address bar is exactly the difference that decides whether the button fits. In `RoomViewer` the cap goes on the *column*, not on the skin, because that column is the container-query context `DigitalSkin` scales its type against.
+
+**Tapping the dial is the primary action**, and only while the timer is not running — a stray tap must not be able to pause a session. It lives in `App.tsx` and not in `TimerStage` because `RoomViewer` shares that component and is read-only by construction.
+
+**Touch targets: `TOUCH_ICON` / `TOUCH_BUTTON`** in [src/components/ui/Button.tsx](src/components/ui/Button.tsx). Controls default to size `md` (40 px) and *shrink* at `sm:`, instead of the reverse — the size depends on the breakpoint, which the `size` prop cannot express. They rely on Tailwind emitting responsive variants after base utilities, so `sm:size-8` wins over `size-10` at equal specificity (verified in the built CSS: base utilities at ~10 kB, the `@media(min-width:40rem)` block at ~32 kB).
+
+The top bar cannot show eight icons on a phone at a usable size, so everything that is not audio or focus mode folds into `MoreMenu`; desktop renders the same `BarAction[]` as loose icons. One list, two renderings — a new action can't land in only one of them.
 
 ### Theming
 
 All color is semantic CSS variables in [src/themes/theme.css](src/themes/theme.css) under `[data-palette="X"][data-theme="Y"]` selectors, bridged to Tailwind via `@theme inline` in [src/index.css](src/index.css) (`bg-surface`, `text-ink`, `border-line`, `text-accent`, …). **No component contains a literal color for UI chrome.** Values are oklch so hue rotation preserves perceived lightness across palettes.
 
 There are exactly two families of deliberate exception, and they are not cleanup targets: the Google mark in `AuthPanel` (brand colors are prescribed, not themed) and the representational skins — `MoonSkin`'s sky/moon and `HourglassSkin`'s glass highlights depict physical objects whose color is the content, not the theme. A palette-driven moon would just be a colored disc.
+
+`useTheme` writes `data-theme` / `data-palette` on `<html>` and then copies the computed `--c-bg` into the `<meta name="theme-color">` tag — that is what keeps a phone's status bar from cutting a hard edge against the background. It is a three-file loop (`index.html` owns the tag, `theme.css` owns the value, `useTheme` joins them); dropping the meta tag from `index.html` silently kills it.
 
 Adding a palette: a block in `theme.css`, an entry in `palettes.ts`, the id in `PaletteId`. An inline script in `index.html` applies the saved theme before first paint — it has to stay inline (an external file would load too late and the wrong-theme flash comes back), and it has to stay comment-free: Vite does not minify `index.html`, so anything written there ships verbatim in the served HTML.
 
@@ -127,6 +147,8 @@ Conflict resolution is per-entity ([src/sync/syncEngine.ts](src/sync/syncEngine.
 Two horizons that look like an inconsistency but aren't: raw `focus_records` are pulled and pushed for the last **180 days** only, while `daily_focus_totals` is asked for **400** (`HISTORY_DAYS`). The rollup is cheap and carries the long history; the per-record detail is not, and nothing in the UI reads records older than six months. Also, `applyRemoteTotals` **replaces** each day rather than adding to it — the server already sums every record, so accumulating would double the day's focus on every sync.
 
 Deletes write `deleted_at`, never remove rows. `updated_at` is set by a server trigger, not the client, because a skewed browser clock would decide LWW conflicts wrong.
+
+The client half of that is `presetsStore.deletedIds`, a local tombstone list kept until `clearTombstones` is called with the ids the server confirmed. A delete that only removed the row locally would come back on the next pull: the other device just sees a remote row it lacks, with no way to tell "this was deleted" from "I haven't received this yet". Same shape in `audioStore` for favorites.
 
 The SDK is dynamically imported in [src/lib/supabase.ts](src/lib/supabase.ts) and the promise is cached — guest mode must never pull `@supabase/supabase-js` into the entry chunk. Use `isCloudConfigured` (a plain env check) for "is cloud available", and `await getSupabase()` only where the client is actually needed.
 

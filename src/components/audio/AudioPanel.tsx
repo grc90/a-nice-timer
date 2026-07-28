@@ -3,7 +3,7 @@ import { useUiStore } from '@/store/uiStore';
 import { useAudioStore } from '@/store/audioStore';
 import { AmbientMixer } from './AmbientMixer';
 import { YouTubePanel } from './YouTubePanel';
-import { IconButton } from '@/components/ui/Button';
+import { IconButton, TOUCH_ICON } from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/Icons';
 import { cn } from '@/utils/cn';
 
@@ -76,7 +76,7 @@ export function AudioPanel() {
                     .join(' · ')}
             </p>
           </div>
-          <IconButton label="Cerrar el panel de audio" size="sm" onClick={() => setOpen(false)}>
+          <IconButton label="Cerrar el panel de audio" className={TOUCH_ICON} onClick={() => setOpen(false)}>
             <CloseIcon />
           </IconButton>
         </header>

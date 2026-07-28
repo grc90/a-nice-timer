@@ -1,6 +1,6 @@
 import { useTimerStore } from '@/store/timerStore';
 import { unlockAudio } from '@/audio/alarm';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button, IconButton, TOUCH_ICON } from '@/components/ui/Button';
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon, StopIcon } from '@/components/ui/Icons';
 import { MINUTE } from '@/utils/time';
 import { cn } from '@/utils/cn';
@@ -67,18 +67,23 @@ export function TimerControls({ minimal = false, className }: TimerControlsProps
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <IconButton label="Reiniciar la fase" onClick={reset} disabled={idle && remainingMs === totalMs} size="sm">
+      <div className="flex items-center gap-2 sm:gap-1.5">
+        <IconButton
+          label="Reiniciar la fase"
+          onClick={reset}
+          disabled={idle && remainingMs === totalMs}
+          className={TOUCH_ICON}
+        >
           <ResetIcon />
         </IconButton>
 
         {mode === 'pomodoro' && (
-          <IconButton label="Saltar a la fase siguiente" onClick={skipPhase} disabled={idle} size="sm">
+          <IconButton label="Saltar a la fase siguiente" onClick={skipPhase} disabled={idle} className={TOUCH_ICON}>
             <SkipIcon />
           </IconButton>
         )}
 
-        <IconButton label="Detener la sesión" onClick={stop} disabled={idle} size="sm">
+        <IconButton label="Detener la sesión" onClick={stop} disabled={idle} className={TOUCH_ICON}>
           <StopIcon />
         </IconButton>
       </div>
