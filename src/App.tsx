@@ -174,7 +174,7 @@ export default function App() {
           </div>
 
           <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_19rem] md:gap-12">
-            <section className="flex flex-col items-center gap-5 sm:gap-7">
+            <section className="flex flex-col items-center gap-3 sm:gap-7">
               <header className="flex flex-col items-center gap-1.5 text-center">
                 <h2 className="text-sm font-medium text-ink">{label}</h2>
                 <p className="text-xs text-faint">
@@ -185,7 +185,7 @@ export default function App() {
 
               {/* El cambio de skin va acá, pegado a la esfera: el control queda
                   junto a lo que modifica. */}
-              <div className="flex w-full flex-col items-center gap-3">
+              <div className="flex w-full flex-col items-center gap-2 sm:gap-3">
                 {/* La esfera se mide contra el alto de la ventana y no sólo
                     contra el ancho. Con `max-w-sm` a secas, en un teléfono la
                     esfera ocupa todo el ancho disponible y empuja el botón de
@@ -193,8 +193,11 @@ export default function App() {
                     reloj lindo sin ninguna forma visible de arrancarlo. `dvh`
                     y no `vh` porque en mobile la barra de direcciones del
                     navegador se cuenta, y es justo la diferencia que decide si
-                    el botón entra. */}
-                <div className="relative w-full max-w-[min(20rem,44dvh)] sm:max-w-[min(24rem,52dvh)] md:max-w-sm">
+                    el botón entra. El tope de mobile es más chico que el de
+                    `sm:` para arriba a propósito: abajo de `sm` "Inicio rápido"
+                    tiene que entrar en la misma pantalla sin scrollear, y el
+                    anillo es el elemento que más alto ocupa. */}
+                <div className="relative w-full max-w-[min(16rem,34dvh)] sm:max-w-[min(24rem,52dvh)] md:max-w-sm">
                   <TimerStage className="w-full" />
                 </div>
                 <SkinSwitcher />
